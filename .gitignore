@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+.venv/
+venv/
+# market data (large, licensed - do not commit)
+*.dbn
+*.dbn.zst
+orderflow_*.csv
+# your own backtest output
+results/run_*/
+.env

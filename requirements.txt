@@ -1,0 +1,6 @@
+numpy
+matplotlib
+websockets>=13   # hub <-> executors
+tzdata           # US Eastern time zone data on Windows
+databento        # COMEX gold data: backtests and the live hub
+# MetaTrader5    # install separately on the Windows PC running MT5

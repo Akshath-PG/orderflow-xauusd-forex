@@ -1,0 +1,33 @@
+config_xauusd.toml | p_informed=0.55 | 22 trading days per run
+  seed  1  PASSED          net    +401.4  trades   5  WR  80.0%  max DD   149.6  passed in 4 trading days
+  seed  2  PASSED          net    +406.4  trades   6  WR  83.3%  max DD    97.7  passed in 2 trading days
+  seed  3  PASSED          net    +405.9  trades   9  WR  77.8%  max DD   270.2  passed in 5 trading days
+  seed  4  PASSED          net    +410.5  trades  44  WR  59.1%  max DD   375.1  passed in 20 trading days
+  seed  5  PASSED          net    +412.4  trades  20  WR  60.0%  max DD   217.0  passed in 10 trading days
+  seed  6  PASSED          net    +406.1  trades  24  WR  54.2%  max DD   192.1  passed in 9 trading days
+  seed  7  PASSED          net    +400.6  trades  42  WR  59.5%  max DD   267.1  passed in 17 trading days
+  seed  8  PASSED          net    +404.7  trades   8  WR  75.0%  max DD   159.8  passed in 2 trading days
+  seed  9  PASSED          net    +401.3  trades  25  WR  64.0%  max DD   232.0  passed in 10 trading days
+  seed 10  PASSED          net    +407.0  trades  20  WR  55.0%  max DD   299.8  passed in 9 trading days
+PASSED: 10
+DRAWDOWN_GUARD: 0
+STILL RUNNING: 0
+days to pass: fastest 2, median 9, slowest 20
+return over the run: median +8.12%, worst +8.01%, months >= +2%: 10/10
+
+config_xauusd.toml | p_informed=0.0 | 22 trading days per run
+  seed  1  STILL RUNNING   net    -331.3  trades  62  WR  40.3%  max DD   519.8  
+  seed  2  STILL RUNNING   net    -345.0  trades  61  WR  31.1%  max DD   358.6  
+  seed  3  STILL RUNNING   net    -343.6  trades  52  WR  28.8%  max DD   422.6  
+  seed  4  STILL RUNNING   net    -335.4  trades  63  WR  38.1%  max DD   337.9  
+  seed  5  STILL RUNNING   net     -62.7  trades  50  WR  44.0%  max DD   468.6  
+  seed  6  STILL RUNNING   net    -336.2  trades  50  WR  38.0%  max DD   336.2  
+  seed  7  STILL RUNNING   net    -342.5  trades  50  WR  34.0%  max DD   349.8  
+  seed  8  STILL RUNNING   net    -344.4  trades  65  WR  38.5%  max DD   344.4  
+  seed  9  STILL RUNNING   net    -244.2  trades  60  WR  46.7%  max DD   499.8  
+  seed 10  STILL RUNNING   net    -220.7  trades  48  WR  50.0%  max DD   310.6  
+PASSED: 0
+DRAWDOWN_GUARD: 0
+STILL RUNNING: 10
+return over the run: median -6.71%, worst -6.90%, months >= +2%: 0/10
+
