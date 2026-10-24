@@ -1,0 +1,115 @@
+# =====================================================================
+#  ORDER-FLOW BOT — CONFIG
+#  This file is the equivalent of the "input" block at the top of an
+#  MQL5 EA. Change numbers here, not in the code.
+# =====================================================================
+
+[instrument]
+# Order flow is READ from COMEX gold futures (GC) - spot XAUUSD has no
+# central tape, so its broker feed has no real big trades or aggressor side.
+# Trades are EXECUTED on spot XAUUSD (cTrader and/or MT5). GC and spot gold
+# move together tick for tick, so price DISTANCES carry over directly.
+#
+# For backtesting, one "contract" = 0.01 lot of XAUUSD (1 oz):
+#   a $0.10 move = $0.10 per 0.01 lot.
+data_symbol         = "GC.v.0"
+exec_symbol         = "XAUUSD"
+tick_size           = 0.10      # GC tick (the flow feed)
+tick_value          = 0.10      # $ per $0.10 move per 0.01 lot of XAUUSD
+commission_per_side = 0.035     # $ per 0.01 lot per side (~$7 per lot round trip) - set your broker's
+report_expert       = "OrderFlowBridge / mt5_executor (GC order flow -> XAUUSD)"
+report_volume_per_unit = 0.01   # reports show lots
+[session]
+# US Eastern time (New York) - daylight saving is handled automatically.
+# These are the times prop firms quote their rules in.
+day_reset_et   = "17:00"   # forex prop firms reset the day at 17:00 New York time
+trade_start_et = "08:30"   # only open trades in the liquid COMEX hours
+trade_end_et   = "15:00"
+flatten_et     = "16:00"   # bot closes everything here (set before your firm's cutoff)
+
+[orderflow]
+bar_seconds        = 60      # footprint bar length
+size_window        = 2000    # prints used for the rolling average print size
+large_print_mult   = 6.0     # a print is "large" if size >= mult x average print
+large_print_min    = 10      # ...and at least this many contracts
+flow_window_sec    = 300     # rolling window for large-print net flow and delta
+imbalance_ratio    = 3.0     # diagonal footprint imbalance ratio (3:1)
+imbalance_min_vol  = 5       # ignore imbalances on tiny levels
+absorption_mult    = 4.0     # heavy aggression at the bar extreme vs avg level volume
+absorption_hold    = 3       # ticks the close must hold away from the extreme
+atr_bars           = 14
+
+[strategy]
+min_net_large          = 40     # net contracts in large prints (buy - sell) inside the window
+require_delta_confirm  = true   # bar delta and rolling delta must agree with the big prints
+require_structure      = true   # need stacked imbalance OR absorption on the bar
+min_stacked            = 3      # stacked imbalance levels
+use_vwap_filter        = true   # longs above session VWAP, shorts below
+max_vwap_extension_atr = 3.0    # don't chase: skip if price is this many ATRs past VWAP
+sl_ticks               = 30     # $3.00 on gold
+tp1_ticks              = 30
+tp2_ticks              = 60
+tp1_fraction           = 0.5    # close half at TP1 (only when >= 2 contracts)
+breakeven_offset_ticks = 2      # SL moves to entry + this after TP1 (covers commission)
+max_hold_minutes       = 30
+flow_reversal_exit     = true   # exit if big flow flips against the position
+reversal_frac          = 0.75
+cooldown_bars          = 3      # bars to wait after a trade closes
+
+[propfirm]
+# ---- Copy from YOUR firm's rules (FundedHive-style $5k 2-step shown) ----
+account_size        = 5000
+profit_target       = 0        # funded account: no target
+max_drawdown        = 400      # max loss 8% = $400 (static on most forex firms)
+drawdown_type       = "static" # "static" | "eod_trailing" | "intraday_trailing"
+trail_stops_at_start = true
+trail_lock_offset   = 0
+daily_loss_limit    = 200      # daily drawdown 4% = $200
+max_contracts_firm  = 500      # in 0.01-lot units: 500 = 5.00 lots
+consistency_pct     = 0        # 0 = firm has no consistency rule
+daily_profit_cap    = 0
+min_profitable_days = 0        # firm's minimum profitable days to pass (0 = none)
+profitable_day_min  = 25        # $ a day must make to count as profitable (check your firm's definition)
+# ---- Bot's own safety margin ----
+safety_buffer       = 40       # bot stops $40 before any firm limit
+bot_daily_stop      = 0
+
+[risk]
+# profile = "evaluation" (pass fast), "funded" (keep the account, ~2%/month) or "custom"
+# A profile overrides the [risk] values below; firm rules above are never changed.
+profile                   = "funded"
+risk_pct_of_room          = 12.0  # risk per trade = this % of the $ room above the drawdown floor
+max_contracts             = 300   # bot's own cap, 0.01-lot units (3.00 lots)
+# --- capital protection (ported from Challenge_EA_Protected) ---
+use_profit_lock           = true
+profit_lock_activate      = 500.0 # $ profit before the lock arms
+profit_lock_giveback_pct  = 35.0
+profit_lock_pause_hours   = 24.0  # pause after a lock, then resume
+relock_buffer             = 250.0 # $ room allowed after resuming
+use_streak_cooldown       = true
+max_consecutive_losses    = 4
+streak_cooldown_hours     = 48.0
+use_adaptive_risk         = true
+risk_cut_per_loss         = 0.70
+min_risk_mult             = 0.33  # adaptive risk never goes below this fraction of normal
+
+[execution]
+latency_ms               = 50     # signal -> order arrives at exchange
+entry_slippage_ticks     = 3      # spot spread (~$0.25) + slippage, in $0.10 steps
+stop_slippage_ticks      = 2
+tp_require_trade_through = true   # a resting TP only fills if price trades THROUGH it
+
+[hub]
+host            = "127.0.0.1"   # use "0.0.0.0" only if executors run on another machine
+port            = 8765
+heartbeat_sec   = 5
+
+[mt5]
+symbol          = "XAUUSD"      # exact name at your broker (e.g. "XAUUSD.m")
+magic           = 840840
+deviation       = 30            # max slippage in points
+login           = 0             # 0 = use the terminal that's already logged in
+password        = ""
+server          = ""
+terminal_path   = ""            # optional path to terminal64.exe
+poll_seconds    = 0.25

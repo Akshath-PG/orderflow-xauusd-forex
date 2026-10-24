@@ -31,7 +31,7 @@ loss on every order — positions stay protected if anything disconnects.
 | `xauusd/ctrader/OrderFlowBridge.cs` | cTrader cBot executor — `AccessRights.None`, prop-firm rules in % |
 | `xauusd/mt5_executor.py` + `executor_core.py` | MT5 executor via the `MetaTrader5` Python library |
 | `orderflow/` | Order-flow engine, strategy, prop-firm risk engine, event-driven backtester |
-| `config_xauusd.toml` | All settings: rules ($5k 2-step example), profile, costs, hub, MT5 |
+| `config_xauusd.toml` / `config_xauusd_funded.toml` | All settings: rules ($5k 2-step example), Evaluation / Funded profile, costs, hub, MT5 |
 | `orderflow_chart.py` | Price + VWAP with big-trade bubbles, delta per bar, cumulative delta |
 | `run_backtest.py`, `robustness_sweep.py`, `fetch_databento.py` | Backtesting on real GC data with spot-gold costs |
 
@@ -60,6 +60,24 @@ python xauusd/hub.py --replay synthetic --speed 120       # plumbing test, no da
 Live: set `DATABENTO_API_KEY`, run `python xauusd/hub.py`, then start the cBot in
 cTrader Desktop on the same PC and/or `python xauusd/mt5_executor.py`.
 **Never connect a real or challenge account to `--replay synthetic`.**
+
+## Real-data backtest, March to today (MT5-style reports)
+
+```
+pip install -r requirements.txt
+set DATABENTO_API_KEY=db-xxxxxxxx            # new Databento accounts get free credit
+python run_real_backtest.py --start 2026-03-01           # shows the cost per month, downloads nothing
+python run_real_backtest.py --start 2026-03-01 --yes     # downloads GC trades month by month and runs
+```
+Or with GC data exported from NinjaTrader (`ninjatrader/OrderFlowTickExporter.cs`, GC, 1-tick, Tick Replay on):
+```
+python run_real_backtest.py --files "orderflow_*.csv" --start 2026-03-01
+```
+Writes `reports/<date>/`: `funded_continuous.html` (funded profile through the whole period),
+`challenge_attempts.html` (a fresh evaluation started on the 1st of each month, up to 45 days each)
+and one full report per attempt. Each report has the MT5 tester layout: settings, results,
+drawdowns, trade statistics, balance/equity chart, monthly and hourly breakdowns, prop-firm
+rule events and the full deals list.
 
 ## Read this before trusting any number
 

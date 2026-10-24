@@ -17,6 +17,8 @@ exec_symbol         = "XAUUSD"
 tick_size           = 0.10      # GC tick (the flow feed)
 tick_value          = 0.10      # $ per $0.10 move per 0.01 lot of XAUUSD
 commission_per_side = 0.035     # $ per 0.01 lot per side (~$7 per lot round trip) - set your broker's
+report_expert       = "OrderFlowBridge / mt5_executor (GC order flow -> XAUUSD)"
+report_volume_per_unit = 0.01   # reports show lots
 [session]
 # US Eastern time (New York) - daylight saving is handled automatically.
 # These are the times prop firms quote their rules in.

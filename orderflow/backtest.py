@@ -47,6 +47,9 @@ class _Position:
     tp1_done: bool = False
     realized: float = 0.0
     exits: list = field(default_factory=list)   # (n, price)
+    sl0: float = 0.0        # stop loss at entry (before breakeven moves)
+    best: float = 0.0       # most favourable price reached (for MFE)
+    worst: float = 0.0      # most adverse price reached (for MAE)
 
 
 @dataclass
@@ -59,6 +62,10 @@ class TradeRecord:
     exit_avg: float
     pnl: float
     reason: str
+    mfe: float = 0.0        # best open profit reached, $ for the full position
+    mae: float = 0.0        # worst open loss reached, $ (negative)
+    sl: float = 0.0
+    tp: float = 0.0
 
 
 class Backtester:
@@ -90,6 +97,7 @@ class Backtester:
         self.pos: _Position | None = None
         self.pending: _Pending | None = None
         self.trades: list[TradeRecord] = []
+        self.deals: list[dict] = []   # every fill, MT5 "Deals" style
         self.equity_curve: list[tuple[int, float]] = []
         self.signals = 0
         self.skipped_size = 0
@@ -188,13 +196,20 @@ class Backtester:
             sl=price - p.side * self.st["sl_ticks"] * tk,
             tp1=price + p.side * self.st["tp1_ticks"] * tk,
             tp2=price + p.side * self.st["tp2_ticks"] * tk)
+        self.pos.best = self.pos.worst = price
+        self.pos.sl0 = self.pos.sl
         self.balance -= self.comm * p.n
         self.pos.realized -= self.comm * p.n
+        self.deals.append({"ts": t.ts, "side": p.side, "dir": "in", "n": p.n, "price": price,
+                           "commission": -self.comm * p.n, "profit": 0.0, "balance": self.balance,
+                           "comment": "entry", "trade": len(self.trades) + 1})
         if self.on_fill:
             self.on_fill(f"ENTRY {'LONG' if p.side > 0 else 'SHORT'} {p.n} @ {price:.2f}")
 
     def _manage(self, t: Tick):
         pos, p, s = self.pos, t.price, self.pos.side
+        if s * (p - pos.best) > 0: pos.best = p
+        if s * (p - pos.worst) < 0: pos.worst = p
         # stop loss
         if (s > 0 and p <= pos.sl + self.eps) or (s < 0 and p >= pos.sl - self.eps):
             worse = min(pos.sl, p) if s > 0 else max(pos.sl, p)
@@ -224,6 +239,9 @@ class Backtester:
         pos.realized += pnl
         pos.n_open -= n
         pos.exits.append((n, price))
+        self.deals.append({"ts": ts, "side": -pos.side, "dir": "out", "n": n, "price": price,
+                           "commission": -self.comm * n, "profit": pnl + self.comm * n,
+                           "balance": self.balance, "comment": reason, "trade": len(self.trades) + 1})
         if self.on_fill:
             self.on_fill(f"EXIT {n} @ {price:.2f} ({reason}) pnl {pnl:+.2f}")
         if pos.n_open > 0 and partial:
@@ -232,8 +250,12 @@ class Backtester:
         if self.on_event:
             self.on_event({"type": "exit", "id": self._sig_id, "ts": ts, "side": pos.side,
                            "reason": reason, "price": round(price, 2)})
+        per_pt = pos.n_init / self.tick * self.tv
         self.trades.append(TradeRecord(pos.entry_ts, ts, pos.side, pos.n_init, pos.entry,
-                                       exit_avg, pos.realized, reason))
+                                       exit_avg, pos.realized, reason,
+                                       mfe=(pos.best - pos.entry) * pos.side * per_pt,
+                                       mae=(pos.worst - pos.entry) * pos.side * per_pt,
+                                       sl=pos.sl0, tp=pos.tp2 if pos.n_init >= 2 else pos.tp1))
         self.risk.on_trade_closed(ts, pos.realized)
         self.strat.on_position_closed()
         self.pos = None
