@@ -17,7 +17,9 @@ import argparse
 import copy
 import glob
 import heapq
+import itertools
 import os
+import re
 import sys
 import tomllib
 from datetime import date, datetime, timedelta
@@ -66,17 +68,35 @@ def download(symbol, start, end, data_dir, yes):
     return [p for p, _ in plan]
 
 
-def tick_stream(files):
-    """Merge files into one time-ordered stream (files may be per month or overlap)."""
-    gens = []
+_RANGE = re.compile(r"_(\d{4}-\d{2}-\d{2})_(\d{4}-\d{2}-\d{2})\.dbn")
+
+
+def tick_stream(files, t0=None, t1=None):
+    """One time-ordered stream of ticks.
+
+    Monthly Databento files (named ..._<start>_<end>.dbn.zst) are read one at a
+    time, in order, skipping months outside [t0, t1) — so only one month sits
+    in memory. Other files (e.g. NinjaTrader CSV exports) are merged by time."""
+    dated, other = [], []
     for f in files:
+        m = _RANGE.search(os.path.basename(f))
+        (dated if m else other).append((m, f))
+    gens = []
+    if dated:
+        keep = []
+        for m, f in sorted(dated, key=lambda x: x[0].group(1)):
+            a, b = et_ns(date.fromisoformat(m.group(1))), et_ns(date.fromisoformat(m.group(2)))
+            if (t1 is None or a < t1) and (t0 is None or b > t0):
+                keep.append(f)
+        gens.append(itertools.chain.from_iterable(ds.load_databento(f) for f in keep))
+    for _, f in other:
         gens.append(ds.load_databento(f) if f.endswith((".dbn", ".dbn.zst")) else ds.load_csv(f))
-    return heapq.merge(*gens, key=lambda t: t.ts)
+    return gens[0] if len(gens) == 1 else heapq.merge(*gens, key=lambda t: t.ts)
 
 
 def run_one(cfg, files, t0=None, t1=None):
     bt = Backtester(cfg)
-    for t in tick_stream(files):
+    for t in tick_stream(files, t0, t1):
         if t0 is not None and t.ts < t0:
             continue
         if t1 is not None and t.ts >= t1:
@@ -98,7 +118,8 @@ def main():
     ap.add_argument("--eval-config", default="config_xauusd.toml")
     ap.add_argument("--funded-config", default="config_xauusd_funded.toml")
     ap.add_argument("--start", default="2026-03-01")
-    ap.add_argument("--end", default=date.today().isoformat())
+    ap.add_argument("--end", default=(date.today() - timedelta(days=1)).isoformat(),
+                    help="default: yesterday (historical data lags the live market)")
     ap.add_argument("--files", nargs="*", help="tick files (NinjaTrader CSV or Databento) instead of downloading")
     ap.add_argument("--data-dir", default="data")
     ap.add_argument("--yes", action="store_true")
